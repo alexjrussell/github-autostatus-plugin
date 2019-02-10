@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import javax.annotation.CheckForNull;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 import org.jenkinsci.plugins.githubautostatus.notifiers.BuildState;
@@ -61,9 +62,18 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 @Extension
 public class GithubBuildStatusGraphListener implements GraphListener {
 
+    // TODO: Add logging
+    //       What if the regexs don't compile?
+    private long configChanged = -1;
+    private Pattern excludeJobsRegex;
+    private Pattern includeJobsRegex;
+
     @Override
     public void onNewHead(FlowNode fn) {
         try {
+            if (!sendNotificationForJob(fn)) {
+                return;
+            }
             if (isStage(fn)) {
                 checkEnableBuildStatus(fn);
             } else if (fn instanceof StepAtomNode) {
@@ -137,6 +147,45 @@ public class GithubBuildStatusGraphListener implements GraphListener {
             }
         } catch (IOException ex) {
             getLogger().log(Level.SEVERE, null, ex);
+        }
+    }
+
+    private boolean sendNotificationForJob(FlowNode fn) {
+        boolean notifyForJob = true;
+        readConfig();
+        // Check the job name against the include & exclude lists
+        if (excludeJobsRegex != null || includeJobsRegex != null) {
+            Run<?, ?> run = runFor(fn.getExecution());
+            if (run != null) {
+                String jobName = run.getParent().getFullName();
+                if (excludeJobsRegex != null && excludeJobsRegex.matcher(jobName).matches()) {
+                    notifyForJob = false;
+                }
+                if (includeJobsRegex != null && includeJobsRegex.matcher(jobName).matches()) {
+                    notifyForJob = true;
+                }
+            }
+        }
+        return notifyForJob;
+    }
+
+    private synchronized void readConfig() {
+        BuildStatusConfig buildStatusConfig = BuildStatusConfig.get();
+        if (configChanged == -1 || buildStatusConfig.lastChanged() != configChanged) {
+            // Read the config
+            String excludeJobs = buildStatusConfig.getExcludeJobs();
+            if (excludeJobs != null && excludeJobs.trim().length() > 0) {
+                excludeJobsRegex = Pattern.compile(excludeJobs);
+            } else {
+                excludeJobsRegex = null;
+            }
+            String includeJobs = buildStatusConfig.getIncludeJobs();
+            if (includeJobs != null && includeJobs.trim().length() > 0) {
+                includeJobsRegex = Pattern.compile(includeJobs);
+            } else {
+                includeJobsRegex = null;
+            }
+            configChanged = buildStatusConfig.lastChanged();
         }
     }
 

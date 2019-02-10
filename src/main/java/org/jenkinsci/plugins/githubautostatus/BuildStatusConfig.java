@@ -72,6 +72,9 @@ public class BuildStatusConfig extends GlobalConfiguration {
     private String influxDbRetentionPolicy;
     private boolean enableInfluxDb;
     private boolean disableGithub;
+    private String excludeJobs;
+    private String includeJobs;
+    private transient long lastChanged = -1;
 
     /**
      * Convenience method to get the configuration object
@@ -133,6 +136,7 @@ public class BuildStatusConfig extends GlobalConfiguration {
     @DataBoundSetter
     public void setEnableGithub(boolean enableGithub) {
         this.disableGithub = !enableGithub;
+        lastChanged = System.currentTimeMillis();
         save();
     }
 
@@ -153,6 +157,7 @@ public class BuildStatusConfig extends GlobalConfiguration {
     @DataBoundSetter
     public void setCredentialsId(String credentialsId) {
         this.credentialsId = credentialsId;
+        lastChanged = System.currentTimeMillis();
         save();
     }
 
@@ -173,6 +178,7 @@ public class BuildStatusConfig extends GlobalConfiguration {
     @DataBoundSetter
     public void setEnableInfluxDb(boolean enableInfluxDb) {
         this.enableInfluxDb = enableInfluxDb;
+        lastChanged = System.currentTimeMillis();
         save();
     }
 
@@ -193,6 +199,7 @@ public class BuildStatusConfig extends GlobalConfiguration {
     @DataBoundSetter
     public void setInfluxDbUrl(String influxDbUrl) {
         this.influxDbUrl = influxDbUrl;
+        lastChanged = System.currentTimeMillis();
         save();
     }
 
@@ -213,6 +220,7 @@ public class BuildStatusConfig extends GlobalConfiguration {
     @DataBoundSetter
     public void setInfluxDbDatabase(String influxDbDatabase) {
         this.influxDbDatabase = influxDbDatabase;
+        lastChanged = System.currentTimeMillis();
         save();
     }
 
@@ -233,6 +241,49 @@ public class BuildStatusConfig extends GlobalConfiguration {
     @DataBoundSetter
     public void setInfluxDbRetentionPolicy(String influxDbRetentionPolicy) {
         this.influxDbRetentionPolicy = influxDbRetentionPolicy;
+        lastChanged = System.currentTimeMillis();
+        save();
+    }
+
+    /**
+     * Get the value of excludeJobs
+     *
+     * @return the value of excludeJobs
+     */
+    public String getExcludeJobs() {
+        return excludeJobs;
+    }
+
+    /**
+     * Set the value of excludeJobs
+     *
+     * @param excludeJobs new value of excludeJobs
+     */
+    @DataBoundSetter
+    public void setExcludeJobs(String excludeJobs) {
+        this.excludeJobs = excludeJobs;
+        lastChanged = System.currentTimeMillis();
+        save();
+    }
+
+    /**
+     * Get the value of includeJobs
+     *
+     * @return the value of includeJobs
+     */
+    public String getIncludeJobs() {
+        return includeJobs;
+    }
+
+    /**
+     * Set the value of includeJobs
+     *
+     * @param includeJobs new value of includeJobs
+     */
+    @DataBoundSetter
+    public void setIncludeJobs(String includeJobs) {
+        this.includeJobs = includeJobs;
+        lastChanged = System.currentTimeMillis();
         save();
     }
 
@@ -295,6 +346,10 @@ public class BuildStatusConfig extends GlobalConfiguration {
                 CredentialsMatchers.instanceOf(type)));
     }
 
+    public long lastChanged() {
+        return lastChanged;
+    }
+
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
     }
@@ -303,6 +358,7 @@ public class BuildStatusConfig extends GlobalConfiguration {
         if (influxDbUser != null || influxDbPassword != null) {
             influxDbUser = null;
             influxDbPassword = null;
+            lastChanged = System.currentTimeMillis();
             save();
         }
         return this;
