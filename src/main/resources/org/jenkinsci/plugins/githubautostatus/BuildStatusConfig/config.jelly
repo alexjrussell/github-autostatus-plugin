@@ -17,10 +17,10 @@
                 <f:textbox />
             </f:entry>
         </f:optionalBlock> 
-        <f:entry inline="true" name="excludeJobs" title="Exclude jobs (regex)" checked="${instance.excludeJobs}">
+        <f:entry inline="true" name="excludeJobs" title="Exclude jobs (regex)" field="excludeJobs">
             <f:textbox />
         </f:entry>
-        <f:entry inline="true" name="includeJobs" title="Include jobs (regex)" checked="${instance.includeJobs}">
+        <f:entry inline="true" name="includeJobs" title="Include jobs (regex)" field="includeJobs">
             <f:textbox />
         </f:entry>
     </f:section>

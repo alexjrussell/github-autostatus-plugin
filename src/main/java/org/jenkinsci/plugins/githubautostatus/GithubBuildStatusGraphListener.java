@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import javax.annotation.CheckForNull;
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 import org.jenkinsci.plugins.githubautostatus.notifiers.BuildState;
@@ -62,8 +63,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 @Extension
 public class GithubBuildStatusGraphListener implements GraphListener {
 
-    // TODO: Add logging
-    //       What if the regexs don't compile?
     private long configChanged = -1;
     private Pattern excludeJobsRegex;
     private Pattern includeJobsRegex;
@@ -71,12 +70,15 @@ public class GithubBuildStatusGraphListener implements GraphListener {
     @Override
     public void onNewHead(FlowNode fn) {
         try {
-            if (!sendNotificationForJob(fn)) {
-                return;
-            }
             if (isStage(fn)) {
+                if (!sendNotificationForJob(fn)) {
+                    return;
+                }
                 checkEnableBuildStatus(fn);
             } else if (fn instanceof StepAtomNode) {
+                if (!sendNotificationForJob(fn)) {
+                    return;
+                }
 
                 // We don't need to look at atom nodes for declarative pipeline jobs, because
                 // they have a nice model containing all the stages
@@ -117,6 +119,9 @@ public class GithubBuildStatusGraphListener implements GraphListener {
                 buildStatusAction.sendNonStageError(fn.getDisplayName());
 
             } else if (fn instanceof StepEndNode) {
+                if (!sendNotificationForJob(fn)) {
+                    return;
+                }
                 BuildStatusAction buildStatusAction = buildStatusActionFor(fn.getExecution());
                 if (buildStatusAction == null) {
                     return;
@@ -160,10 +165,18 @@ public class GithubBuildStatusGraphListener implements GraphListener {
                 String jobName = run.getParent().getFullName();
                 if (excludeJobsRegex != null && excludeJobsRegex.matcher(jobName).matches()) {
                     notifyForJob = false;
+                    log(Level.INFO, "Excluding job from autostatus notification - %s", jobName);
                 }
-                if (includeJobsRegex != null && includeJobsRegex.matcher(jobName).matches()) {
-                    notifyForJob = true;
+                if (includeJobsRegex != null) {
+                    if (includeJobsRegex.matcher(jobName).matches()) {
+                        notifyForJob = true;
+                        log(Level.INFO, "Including job in autostatus notification - %s", jobName);
+                    } else {
+                        notifyForJob = false;
+                    }
                 }
+            } else {
+                log(Level.SEVERE, "Unable to get run object");
             }
         }
         return notifyForJob;
@@ -173,15 +186,28 @@ public class GithubBuildStatusGraphListener implements GraphListener {
         BuildStatusConfig buildStatusConfig = BuildStatusConfig.get();
         if (configChanged == -1 || buildStatusConfig.lastChanged() != configChanged) {
             // Read the config
+            log(Level.INFO, "Reading autostatus include/exclude configuration");
             String excludeJobs = buildStatusConfig.getExcludeJobs();
             if (excludeJobs != null && excludeJobs.trim().length() > 0) {
-                excludeJobsRegex = Pattern.compile(excludeJobs);
+                try {
+                    excludeJobsRegex = Pattern.compile(excludeJobs);
+                    log(Level.INFO, "Exlcuding jobs that match pattern: " + excludeJobs);
+                } catch (PatternSyntaxException pse) {
+                    log(Level.SEVERE, "Ignoring invalid exclude pattern - " + excludeJobs);
+                    excludeJobsRegex = null;
+                }
             } else {
                 excludeJobsRegex = null;
             }
             String includeJobs = buildStatusConfig.getIncludeJobs();
             if (includeJobs != null && includeJobs.trim().length() > 0) {
-                includeJobsRegex = Pattern.compile(includeJobs);
+                try {
+                    includeJobsRegex = Pattern.compile(includeJobs);
+                    log(Level.INFO, "Inlcuding jobs that match pattern: " + includeJobs);
+                } catch (PatternSyntaxException pse) {
+                    log(Level.SEVERE, "Ignoring invalid include pattern - " + includeJobs);
+                    includeJobsRegex = null;
+                }
             } else {
                 includeJobsRegex = null;
             }

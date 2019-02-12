@@ -74,7 +74,7 @@ public class BuildStatusConfig extends GlobalConfiguration {
     private boolean disableGithub;
     private String excludeJobs;
     private String includeJobs;
-    private transient long lastChanged = -1;
+    private transient long lastChanged = System.currentTimeMillis();
 
     /**
      * Convenience method to get the configuration object
