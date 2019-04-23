@@ -313,14 +313,14 @@ public class GithubBuildStatusGraphListener implements GraphListener {
     private static List<String> getAllStageNames(ModelASTStage stage) {
         List<String> stageNames = new ArrayList<>();
         stageNames.add(stage.getName());
-        ModelASTStages stages = stage.getStages();
-        if (stages == null) {
-            stages = stage.getParallel();
+        List<ModelASTStage> stageList = null;
+        if (stage.getStages() != null) {
+            stageList = stage.getStages().getStages();
+        } else {
+            stageList = stage.getParallelContent();
         }
-        if (stages != null) {
-            for (ModelASTStage innerStage : stages.getStages()) {
-                stageNames.addAll(getAllStageNames(innerStage));
-            }
+        for (ModelASTStage innerStage : stageList) {
+            stageNames.addAll(getAllStageNames(innerStage));
         }
         return stageNames;
     }
