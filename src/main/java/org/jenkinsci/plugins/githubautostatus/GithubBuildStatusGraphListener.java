@@ -274,7 +274,7 @@ public class GithubBuildStatusGraphListener implements GraphListener {
 
     }
 
-    private static List<String> getDeclarativeStages(Run<?, ?> run) {
+    protected static List<String> getDeclarativeStages(Run<?, ?> run) {
         ExecutionModelAction executionModelAction = run.getAction(ExecutionModelAction.class);
         if (null == executionModelAction) {
             return null;
